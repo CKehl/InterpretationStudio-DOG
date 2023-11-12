@@ -1,0 +1,159 @@
+		growSelectionItem.addSelectionListener(new SelectionListener() {
+			
+			@Override
+			public void widgetSelected(SelectionEvent arg0) {
+				// ====== First stash the initial patch config ====== //
+				if(init_patch_obj==null) {
+					init_patch_obj = new vtkPolyData();
+					init_patch_obj.CopyStructure(main_obj);
+			        int numVerts = main_obj.GetNumberOfPoints();
+			        boolean has_vertex_indicators = (init_patch_obj.GetPointData().HasArray("FlagV")!=0 ? true : false);
+			        boolean has_cell_indicators = (init_patch_obj.GetPointData().HasArray("FlagT")!=0 ? true : false);
+			        if(!has_vertex_indicators) {
+				        vtkShortArray vertex_flags = new vtkShortArray();
+				        vertex_flags.SetName("FlagV");
+				        vertex_flags.SetNumberOfComponents(1);
+				        vertex_flags.SetNumberOfTuples(numVerts);
+				        init_patch_obj.GetPointData().AddArray(vertex_flags);
+			        }
+			        vtkShortArray dst_v_flags = new vtkShortArray(init_patch_obj.GetPointData().GetArray("FlagV").GetVTKId());
+			        vtkShortArray src_v_flags = new vtkShortArray(main_obj.GetPointData().GetArray("FlagV").GetVTKId());
+			        for(int i=0; i<numVerts; i++) {
+			        	dst_v_flags.SetValue(i, src_v_flags.GetValue(i));
+			        }
+			        int numCells = main_obj.GetNumberOfCells();
+			        if(!has_cell_indicators) {
+				        vtkShortArray surface_flags = new vtkShortArray();
+				        surface_flags.SetName("FlagT");
+				        surface_flags.SetNumberOfComponents(1);
+				        surface_flags.SetNumberOfTuples(numCells);
+				        init_patch_obj.GetCellData().AddArray(surface_flags);
+			        }
+			        vtkShortArray dst_f_flags = new vtkShortArray(init_patch_obj.GetCellData().GetArray("FlagT").GetVTKId());
+			        vtkShortArray src_f_flags = new vtkShortArray(main_obj.GetCellData().GetArray("FlagT").GetVTKId());
+			        for(int i=0; i<numCells; i++) {
+			        	dst_f_flags.SetValue(i, src_f_flags.GetValue(i));
+			        }
+				}
+				int numVerts = main_obj.GetNumberOfPoints();
+		        vtkShortArray dst_v_flags = new vtkShortArray(init_patch_obj.GetPointData().GetArray("FlagV").GetVTKId());
+		        vtkShortArray src_v_flags = new vtkShortArray(main_obj.GetPointData().GetArray("FlagV").GetVTKId());
+		        for(int i=0; i<numVerts; i++) {
+		        	dst_v_flags.SetValue(i, src_v_flags.GetValue(i));
+		        }
+		        int numCells = main_obj.GetNumberOfCells();
+		        vtkShortArray dst_f_flags = new vtkShortArray(init_patch_obj.GetCellData().GetArray("FlagT").GetVTKId());
+		        vtkShortArray src_f_flags = new vtkShortArray(main_obj.GetCellData().GetArray("FlagT").GetVTKId());
+		        for(int i=0; i<numCells; i++) {
+		        	dst_f_flags.SetValue(i, src_f_flags.GetValue(i));
+		        }
+				
+		        // ====== Second, expand the curve depending on the recent mode off patch addition ====== //
+				switch(active_mode) {
+				case 0: {
+					break;
+				}
+				case 1: {
+					// Point source
+					//Mesh cgel_mesh = Mesh.from_vtkPolyData(main_obj);
+					if(mesh_obj_cgel==null)
+						mesh_obj_cgel = new Mesh(main_obj);
+					else {
+						mesh_obj_cgel.updateByMaskingIndicator(main_obj, "FlagT", active_category_id);
+						mesh_obj_cgel.updateByMaskingIndicator(main_obj, "FlagV", active_category_id);
+					}
+					Propagation cgel_expand = new Propagation();
+					cgel_expand.setBaseMesh(mesh_obj_cgel);
+					cgel_expand.use_AutoDistanceCompute();
+					//cgel_expand.use_1RingDistance();
+					cgel_expand.evolveByLocalShapeCategory();
+					cgel_expand.disableGeometrySmoothing();
+					cgel_expand.enablePostprocessing();
+					cgel_expand.compute();
+					//cgel_mesh.update_vtkPolyData(main_obj);
+					mesh_obj_cgel.updateByUnmaskingIndicator(main_obj, "FlagT", active_category_id);
+					mesh_obj_cgel.updateByUnmaskingIndicator(main_obj, "FlagV", active_category_id);
+					
+					mesh_obj_cgel.dispose();
+					mesh_obj_cgel=null;
+					cgel_expand.dispose();
+					cgel_expand=null;
+					break;
+				}
+				case 2: {
+					// Line source
+					vtkPolyData[] line_arr_vtk = line_select_style.GetLineSegments();
+					LineSegment[] curve_constraints = null;
+					if(line_arr_vtk!=null) {
+						curve_constraints = new LineSegment[line_arr_vtk.length];
+						for(int i=0; i<line_arr_vtk.length; i++) {
+							vtkPolyData line_item = line_arr_vtk[i];
+							curve_constraints[i] = LineSegment.LineSegment_from_vtkPolyData(line_item);
+						}
+					}
+					
+					//Mesh cgel_mesh = Mesh.from_vtkPolyData(main_obj);
+					if(mesh_obj_cgel==null)
+						mesh_obj_cgel = new Mesh(main_obj);
+					mesh_obj_cgel.updateByMaskingIndicator(main_obj, "FlagT", active_category_id);
+					mesh_obj_cgel.updateByMaskingIndicator(main_obj, "FlagV", active_category_id);
+					Propagation cgel_expand = new Propagation();
+					cgel_expand.setBaseMesh(mesh_obj_cgel);
+					if(line_arr_vtk!=null) {
+						cgel_expand.setLineSegments(curve_constraints);
+					}
+					cgel_expand.use_AutoDistanceCompute();
+					cgel_expand.evolveByCurvatureConstraint();
+					cgel_expand.disableGeometrySmoothing();
+					cgel_expand.enablePostprocessing();
+					cgel_expand.compute();
+					//cgel_mesh.update_vtkPolyData(main_obj);
+					mesh_obj_cgel.updateByUnmaskingIndicator(main_obj, "FlagT", active_category_id);
+					mesh_obj_cgel.updateByUnmaskingIndicator(main_obj, "FlagV", active_category_id);
+					
+					mesh_obj_cgel.dispose();
+					mesh_obj_cgel=null;
+					cgel_expand.dispose();
+					cgel_expand=null;
+					break;
+				}
+				case 3: {
+					// Area source
+					//Mesh cgel_mesh = Mesh.from_vtkPolyData(main_obj);
+					if(mesh_obj_cgel==null)
+						mesh_obj_cgel = new Mesh(main_obj);
+					mesh_obj_cgel.updateByMaskingIndicator(main_obj, "FlagT", active_category_id);
+					mesh_obj_cgel.updateByMaskingIndicator(main_obj, "FlagV", active_category_id);
+					Propagation cgel_expand = new Propagation();
+					cgel_expand.setBaseMesh(mesh_obj_cgel);
+					cgel_expand.use_1RingDistance();
+					cgel_expand.evolveByCurvatureConstraint();
+					cgel_expand.disableGeometrySmoothing();
+					cgel_expand.enablePostprocessing();
+					cgel_expand.compute();
+					//cgel_mesh.update_vtkPolyData(main_obj);
+					mesh_obj_cgel.updateByUnmaskingIndicator(main_obj, "FlagT", active_category_id);
+					mesh_obj_cgel.updateByUnmaskingIndicator(main_obj, "FlagV", active_category_id);
+					
+					mesh_obj_cgel.dispose();
+					mesh_obj_cgel=null;
+					cgel_expand.dispose();
+					cgel_expand=null;
+				}
+				default: {
+					break;
+				}
+				}
+
+				
+				main_obj.GetPointData().Modified();
+				main_obj.GetCellData().Modified();
+				rw.Render();
+			}
+			
+			@Override
+			public void widgetDefaultSelected(SelectionEvent arg0) {
+				// TODO Auto-generated method stub
+				
+			}
+		});

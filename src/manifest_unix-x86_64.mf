@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Main-Class: ckehl.vtk.SWT_AWT_VTK_sample
+Class-Path: ../bin/CGEL.jar ../bin/CGEL-natives-Linux-x86_64.jar ../bin/gluegen-rt-2.3.2-natives-linux-amd64.jar ../bin/gluegen-rt-2.3.2.jar ../bin/jogl-all-2.3.2-natives-linux-amd64.jar ../bin/jogl-all-2.3.2.jar ../bin/swt-4.12-linux-x86_64.jar ../bin/vtk-8.2.jar ../bin/vtk-8.2-natives-Linux-x86_64.jar ./lib
+
