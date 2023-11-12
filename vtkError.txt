@@ -1,0 +1,4 @@
+ERROR: In /media/christian/DATA/mercurial/VTK-Java/VTK-8.2.0/Rendering/OpenGL2/vtkShaderProgram.cxx, line 491
+vtkShaderProgram (0x7fc440c5f5c0): Shader object was not initialized, cannot attach it.
+
+

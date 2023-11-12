@@ -1,0 +1,82 @@
+		refineSelectionItem.addSelectionListener(new SelectionListener() {
+			
+			@Override
+			public void widgetSelected(SelectionEvent arg0) {
+				// TODO Auto-generated method stub
+				//Mesh cgel_mesh_init = Mesh.from_vtkPolyData(main_obj);
+				//Mesh cgel_mesh_init = new Mesh(init_patch_obj);
+		        if(init_patch_obj_cgel==null) {
+		        	init_patch_obj_cgel = new Mesh(init_patch_obj);
+		        }
+		        init_patch_obj_cgel.updateByMaskingIndicator(init_patch_obj, "FlagT", active_category_id);
+		        init_patch_obj_cgel.updateByMaskingIndicator(init_patch_obj, "FlagV", active_category_id);
+				
+				//Mesh cgel_mesh = Mesh.from_vtkPolyData(main_obj);
+				//Mesh cgel_mesh_opt = new Mesh(main_obj);
+				if(mesh_obj_cgel==null)
+					mesh_obj_cgel = new Mesh(main_obj);
+				mesh_obj_cgel.updateByMaskingIndicator(main_obj, "FlagT", active_category_id);
+				mesh_obj_cgel.updateByMaskingIndicator(main_obj, "FlagV", active_category_id);
+				Morphology cgel_morph = new Morphology();
+				//cgel_morph.setSizeThresholdMode(typedefs.MEDIAN_AVG);
+				cgel_morph.setSizeThresholdMode(typedefs.CONFIDENCE_95);
+				cgel_morph.setTriangleSizeMetric(typedefs.TRIANGLE_CIRCUMCIRCLE_METRIC);
+				//cgel_morph.setTriangleSizeMetric(typedefs.TRIANGLE_INCIRCLE_METRIC);
+				cgel_morph.enablePostprocessing();
+				cgel_morph.setBaseMesh(mesh_obj_cgel);
+				cgel_morph.setInitPatchMesh(init_patch_obj_cgel);
+				cgel_morph.compute();
+				//cgel_mesh_init.dispose();
+				//cgel_mesh_init=null;
+				System.out.println("Computed morphology.");
+				System.out.printf("%d core patches, %d anticore patches, %d mortar patches.\n", cgel_morph.getNumberOfCorePatches(),cgel_morph.getNumberOfAnticorePatches(),cgel_morph.getNumberOfMortarPatches());
+				
+				Optimization cgel_optim = new Optimization();
+				cgel_optim.setMesh(mesh_obj_cgel);
+				cgel_optim.setInternalPriority(0.8);
+				cgel_optim.setLengthWeight(0.4);
+				cgel_optim.setIterationLimit(2200);
+				cgel_optim.setStableIterationLimit(10);
+				cgel_optim.setErrorLimit(0.000001);
+				cgel_optim.enablePostprocessing();
+				cgel_optim.activate_InternalExternalWeighting();
+				cgel_optim.activate_LengthAngleWeighting();
+				/*
+				for(int i=0; i<cgel_morph.getNumberOfCorePatches(); i++) {
+					cgel_optim.addCorePatches(cgel_morph.getCorePatch(i));
+				}
+				for(int i=0; i<cgel_morph.getNumberOfAnticorePatches(); i++) {
+					cgel_optim.addAnticorePatch(cgel_morph.getAnticorePatch(i));
+				}
+				for(int i=0; i<cgel_morph.getNumberOfMortarPatches(); i++) {
+					cgel_optim.addMortarPatch(cgel_morph.getMortarPatch(i));
+				}
+				*/
+				System.out.println("recompute morpholgy from indicators.");
+				cgel_optim.autofill_morphology();
+				System.out.println("start simulated annealing.");
+				cgel_optim.compute_SimulatedAnnealing();
+				System.out.println("Computed optimization.");
+				
+				//cgel_mesh_opt.update_vtkPolyData(main_obj);
+				mesh_obj_cgel.updateByUnmaskingIndicator(main_obj, "FlagT", active_category_id);
+				mesh_obj_cgel.updateByUnmaskingIndicator(main_obj, "FlagV", active_category_id);
+				
+				//cgel_mesh_opt.dispose();
+				//cgel_mesh_opt=null;
+				cgel_morph.dispose();
+				cgel_morph=null;
+				cgel_optim.dispose();
+				cgel_optim=null;
+				
+				main_obj.GetPointData().Modified();
+				main_obj.GetCellData().Modified();
+				rw.Render();
+			}
+			
+			@Override
+			public void widgetDefaultSelected(SelectionEvent arg0) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
